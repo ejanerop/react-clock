@@ -1,7 +1,7 @@
-import {useRef, useState} from "react";
+import {Component} from "react";
 import "./App.scss";
 
-const accurateInterval = (fn, time) => {
+const accurateInterval = function (fn, time) {
     var cancel, nextAt, timeout, wrapper;
     nextAt = new Date().getTime() + time;
     timeout = null;
@@ -19,215 +19,234 @@ const accurateInterval = (fn, time) => {
     };
 };
 
-function App() {
-    const [brkLength, setBrkLength] = useState(5);
-    const [seshLength, setSeshLength] = useState(25);
-    const [timerState, setTimerState] = useState("stopped");
-    const [timer, setTimer] = useState(1500);
-    const [timerType, setTimerType] = useState("Session");
-    const [intervalID, setIntervalID] = useState("");
-    const [alarmColor, setAlarmClock] = useState({color: "black"});
-
-    const audioBeep = useRef(null);
-
-    const lengthControl = (stateToChange, sign, currentLength, type) => {
-        if (timerState === "running") {
+class App extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            brkLength: 5,
+            seshLength: 25,
+            timerState: "stopped",
+            timerType: "Session",
+            timer: 1500,
+            intervalID: "",
+            alarmColor: {color: "black"},
+        };
+        this.setBrkLength = this.setBrkLength.bind(this);
+        this.setSeshLength = this.setSeshLength.bind(this);
+        this.lengthControl = this.lengthControl.bind(this);
+        this.timerControl = this.timerControl.bind(this);
+        this.beginCountDown = this.beginCountDown.bind(this);
+        this.decrementTimer = this.decrementTimer.bind(this);
+        this.phaseControl = this.phaseControl.bind(this);
+        this.warning = this.warning.bind(this);
+        this.buzzer = this.buzzer.bind(this);
+        this.switchTimer = this.switchTimer.bind(this);
+        this.clockify = this.clockify.bind(this);
+        this.reset = this.reset.bind(this);
+    }
+    setBrkLength(e) {
+        this.lengthControl(
+            "brkLength",
+            e.currentTarget.value,
+            this.state.brkLength,
+            "Session"
+        );
+    }
+    setSeshLength(e) {
+        this.lengthControl(
+            "seshLength",
+            e.currentTarget.value,
+            this.state.seshLength,
+            "Break"
+        );
+    }
+    lengthControl(stateToChange, sign, currentLength, timerType) {
+        if (this.state.timerState === "running") {
             return;
         }
-        if (timerType === type) {
+        if (this.state.timerType === timerType) {
             if (sign === "-" && currentLength !== 1) {
-                if (stateToChange === "brkLength") {
-                    setBrkLength(currentLength - 1);
-                } else {
-                    setSeshLength(currentLength - 1);
-                }
+                this.setState({[stateToChange]: currentLength - 1});
             } else if (sign === "+" && currentLength !== 60) {
-                if (stateToChange === "brkLength") {
-                    setBrkLength(currentLength + 1);
-                } else {
-                    setSeshLength(currentLength + 1);
-                }
+                this.setState({[stateToChange]: currentLength + 1});
             }
         } else if (sign === "-" && currentLength !== 1) {
-            if (stateToChange === "brkLength") {
-                setBrkLength(currentLength - 1);
-            } else {
-                setSeshLength(currentLength - 1);
-            }
-            setTimer(currentLength * 60 - 60);
+            this.setState({
+                [stateToChange]: currentLength - 1,
+                timer: currentLength * 60 - 60,
+            });
         } else if (sign === "+" && currentLength !== 60) {
-            if (stateToChange === "brkLength") {
-                setBrkLength(currentLength + 1);
-            } else {
-                setSeshLength(currentLength + 1);
-            }
-            setTimer(currentLength * 60 + 60);
+            this.setState({
+                [stateToChange]: currentLength + 1,
+                timer: currentLength * 60 + 60,
+            });
         }
-    };
-
-    const changeBrkLength = (e) => {
-        lengthControl("brkLength", e.currentTarget.value, brkLength, "Session");
-    };
-
-    const changeSeshLength = (e) => {
-        lengthControl("seshLength", e.currentTarget.value, seshLength, "Break");
-    };
-
-    const timerControl = () => {
-        if (timerState === "stopped") {
-            setTimerState("running");
-            beginCountDown();
+    }
+    timerControl() {
+        if (this.state.timerState === "stopped") {
+            this.beginCountDown();
+            this.setState({timerState: "running"});
         } else {
-            setTimerState("stopped");
-            if (intervalID) {
-                intervalID.cancel();
+            this.setState({timerState: "stopped"});
+            if (this.state.intervalID) {
+                this.state.intervalID.cancel();
             }
         }
-    };
-
-    const beginCountDown = () => {
-        setIntervalID(
-            accurateInterval(() => {
-                decrementTimer();
-                phaseControl();
-            }, 1000)
-        );
-    };
-
-    const decrementTimer = () => {
-        setTimer((timer) => timer - 1);
-    };
-
-    const phaseControl = () => {
-        let theTimer = (asd) => timer;
-        console.log(theTimer);
-        warning(theTimer);
-        buzzer(theTimer);
-        if (theTimer < 0) {
-            if (intervalID) {
-                intervalID.cancel();
+    }
+    beginCountDown() {
+        this.setState({
+            intervalID: accurateInterval(() => {
+                this.decrementTimer();
+                this.phaseControl();
+            }, 1000),
+        });
+    }
+    decrementTimer() {
+        this.setState({timer: this.state.timer - 1});
+    }
+    phaseControl() {
+        let timer = this.state.timer;
+        this.warning(timer);
+        this.buzzer(timer);
+        if (timer < 0) {
+            if (this.state.intervalID) {
+                this.state.intervalID.cancel();
             }
-            if (timerType === "Session") {
-                beginCountDown();
-                switchTimer(brkLength * 60, "Break");
+            if (this.state.timerType === "Session") {
+                this.beginCountDown();
+                this.switchTimer(this.state.brkLength * 60, "Break");
             } else {
-                beginCountDown();
-                switchTimer(seshLength * 60, "Session");
+                this.beginCountDown();
+                this.switchTimer(this.state.seshLength * 60, "Session");
             }
         }
-    };
-
-    const warning = (_timer) => {
+    }
+    warning(_timer) {
         if (_timer < 61) {
-            setAlarmClock({color: "#a50d0d"});
+            this.setState({alarmColor: {color: "#a50d0d"}});
         } else {
-            setAlarmClock({color: "black"});
+            this.setState({alarmColor: {color: "white"}});
         }
-    };
-    const buzzer = (_timer) => {
+    }
+    buzzer(_timer) {
         if (_timer === 0) {
-            audioBeep.current.play();
+            this.audioBeep.play();
         }
-    };
-    const switchTimer = (num, str) => {
-        setTimer(num);
-        setTimerType(str);
-        setAlarmClock({color: "black"});
-    };
-
-    const clockify = () => {
-        let minutes = Math.floor(timer / 60);
-        let seconds = timer - minutes * 60;
+    }
+    switchTimer(num, str) {
+        this.setState({
+            timer: num,
+            timerType: str,
+            alarmColor: {color: "white"},
+        });
+    }
+    clockify() {
+        let minutes = Math.floor(this.state.timer / 60);
+        let seconds = this.state.timer - minutes * 60;
         seconds = seconds < 10 ? "0" + seconds : seconds;
         minutes = minutes < 10 ? "0" + minutes : minutes;
         return minutes + ":" + seconds;
-    };
-
-    const reset = () => {
-        setBrkLength(5);
-        setSeshLength(25);
-        setTimerState("stopped");
-        setTimer(1500);
-        setTimerType("Session");
-        setIntervalID("");
-        setAlarmClock({color: "black"});
-        if (intervalID) {
-            intervalID.cancel();
+    }
+    reset() {
+        this.setState({
+            brkLength: 5,
+            seshLength: 25,
+            timerState: "stopped",
+            timerType: "Session",
+            timer: 1500,
+            intervalID: "",
+            alarmColor: {color: "white"},
+        });
+        if (this.state.intervalID) {
+            this.state.intervalID.cancel();
         }
-        audioBeep.current.pause();
-        audioBeep.current.currentTime = 0;
-    };
-
-    return (
-        <div className="App">
-            <div className="clock">
-                <div className="title">25 + 5 Clock</div>
-                <div className="config">
-                    <div className="length-control">
-                        <div id="break-label">Break Length</div>
-                        <button
-                            className="btn-level"
-                            id="break-decrement"
-                            onClick={changeBrkLength}
-                            value="-">
-                            <i className="fa fa-arrow-down fa-2x"></i>
-                        </button>
-                        <div className="btn-level" id="break-length">
-                            {brkLength}
+        this.audioBeep.pause();
+        this.audioBeep.currentTime = 0;
+    }
+    render() {
+        return (
+            <div className="App">
+                <div className="clock">
+                    <div className="title">25 + 5 Clock</div>
+                    <div className="config">
+                        <div className="length-control">
+                            <div id="break-label">Break Length</div>
+                            <button
+                                className="btn-level"
+                                id="break-decrement"
+                                onClick={this.setBrkLength}
+                                value="-">
+                                <i className="fa fa-arrow-down fa-2x"></i>
+                            </button>
+                            <div className="btn-level" id="break-length">
+                                {this.state.brkLength}
+                            </div>
+                            <button
+                                className="btn-level"
+                                id="break-increment"
+                                onClick={this.setBrkLength}
+                                value="+">
+                                <i className="fa fa-arrow-up fa-2x"></i>
+                            </button>
                         </div>
-                        <button
-                            className="btn-level"
-                            id="break-increment"
-                            onClick={changeBrkLength}
-                            value="+">
-                            <i className="fa fa-arrow-up fa-2x"></i>
-                        </button>
-                    </div>
-                    <div className="length-control">
-                        <div id="session-label">Session Length</div>
-                        <button
-                            className="btn-level"
-                            id="session-decrement"
-                            onClick={changeSeshLength}
-                            value="-">
-                            <i className="fa fa-arrow-down fa-2x"></i>
-                        </button>
-                        <div className="btn-level" id="session-length">
-                            {seshLength}
+                        <div className="length-control">
+                            <div id="session-label">Session Length</div>
+                            <button
+                                className="btn-level"
+                                id="session-decrement"
+                                onClick={this.setSeshLength}
+                                value="-">
+                                <i className="fa fa-arrow-down fa-2x"></i>
+                            </button>
+                            <div className="btn-level" id="session-length">
+                                {this.state.seshLength}
+                            </div>
+                            <button
+                                className="btn-level"
+                                id="session-increment"
+                                onClick={this.setSeshLength}
+                                value="+">
+                                <i className="fa fa-arrow-up fa-2x"></i>
+                            </button>
                         </div>
+                    </div>
+                    <div
+                        className="timer-container"
+                        style={this.state.alarmColor}>
+                        <div className="timer-label">
+                            {this.state.timerType}
+                        </div>
+                        <div className="timer" id="time-left">
+                            {this.clockify()}
+                        </div>
+                    </div>
+                    <div className="controls">
                         <button
-                            className="btn-level"
-                            id="session-increment"
-                            onClick={changeSeshLength}
-                            value="+">
-                            <i className="fa fa-arrow-up fa-2x"></i>
+                            className="control"
+                            id="start_stop"
+                            onClick={this.timerControl}>
+                            <i className="fas fa-play fa-2x"></i>
+                            <i className="fas fa-pause fa-2x"></i>
+                        </button>
+                        <button
+                            className="control"
+                            id="reset"
+                            onClick={this.reset}>
+                            <i className="fas fa-refresh fa-2x"></i>
                         </button>
                     </div>
+                    <audio
+                        id="beep"
+                        preload="auto"
+                        ref={(audio) => {
+                            this.audioBeep = audio;
+                        }}
+                        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
+                    />
                 </div>
-                <div className="timer-container" style={alarmColor}>
-                    <div className="timer-label">{timerType}</div>
-                    <div className="timer" id="time-left">
-                        {clockify()}
-                    </div>
-                </div>
-                <div className="controls">
-                    <button className="control" onClick={timerControl}>
-                        <i className="fas fa-play fa-2x"></i>
-                        <i className="fas fa-pause fa-2x"></i>
-                    </button>
-                    <button className="control" onClick={reset}>
-                        <i className="fas fa-refresh fa-2x"></i>
-                    </button>
-                </div>
-                <audio
-                    id="beep"
-                    preload="auto"
-                    ref={audioBeep}
-                    src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
-                />
             </div>
-        </div>
-    );
+        );
+    }
 }
 
 export default App;
